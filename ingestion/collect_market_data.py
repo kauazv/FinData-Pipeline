@@ -1,6 +1,6 @@
 import requests
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, UTC
 from pathlib import Path
 
 URL = "https://api.coingecko.com/api/v3/coins/markets"
@@ -27,7 +27,7 @@ def fetch_market_data():
 def save_raw_data(df):
     """Salva dados na camada bronze"""
     
-    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
 
     path = Path("data/bronze")
     path.mkdir(parents=True, exist_ok=True)
