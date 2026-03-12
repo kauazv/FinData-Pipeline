@@ -18,7 +18,7 @@ def validate_data():
 
     print("Iniciando validação de dados...\n")
 
-    # 1️⃣ verificar valores nulos
+    #verificar valores nulos
     nulls = df.isnull().sum()
 
     if nulls.sum() > 0:
@@ -27,7 +27,7 @@ def validate_data():
     else:
         print("Nenhum valor nulo encontrado")
 
-    # 2️⃣ verificar duplicados
+    #verificar duplicados
     duplicates = df.duplicated().sum()
 
     if duplicates > 0:
@@ -35,7 +35,7 @@ def validate_data():
     else:
         print("Nenhum registro duplicado")
 
-    # 3️⃣ verificar colunas obrigatórias
+    #verificar colunas obrigatórias
     required_columns = ["symbol", "price", "timestamp"]
 
     missing_columns = [c for c in required_columns if c not in df.columns]
