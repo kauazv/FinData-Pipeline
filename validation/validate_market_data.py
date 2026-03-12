@@ -36,7 +36,15 @@ def validate_data():
         print("Nenhum registro duplicado")
 
     #verificar colunas obrigatórias
-    required_columns = ["symbol", "price", "timestamp"]
+    required_columns = [
+        "date",
+        "symbol",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume"
+    ]
 
     missing_columns = [c for c in required_columns if c not in df.columns]
 

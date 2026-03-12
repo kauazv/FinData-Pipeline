@@ -20,7 +20,7 @@ def process_data():
     df = pd.read_csv(file_path)
 
     # padronização de nomes
-    df.columns = [c.lower() for c in df.columns]
+    df.columns = [c.lower().replace(" ", "_") for c in df.columns]
 
     # remover duplicados
     df = df.drop_duplicates()
