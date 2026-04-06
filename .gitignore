@@ -24,6 +24,8 @@ data/gold/*
 # Runtime caches
 data/cache/
 .cache/
+storage/runs/*
+!storage/runs/.gitkeep
 
 # Local analytical databases and transaction logs
 warehouse/*.duckdb

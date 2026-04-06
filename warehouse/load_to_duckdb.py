@@ -26,6 +26,43 @@ def get_latest_file():
     return os.path.join(GOLD_PATH, files[-1])
 
 
+def ensure_compatible_table(con: duckdb.DuckDBPyConnection, run_id: str) -> None:
+    table_exists = con.execute(
+        f"SELECT COUNT(*) FROM information_schema.tables WHERE table_name = '{TABLE_NAME}'"
+    ).fetchone()[0] > 0
+
+    if not table_exists:
+        con.execute(f"""
+            CREATE TABLE {TABLE_NAME} AS
+            SELECT * FROM incoming_df WHERE 1=0
+        """)
+        logger.info("Tabela %s criada com schema atual", TABLE_NAME)
+        return
+
+    current_columns = [
+        row[1]
+        for row in con.execute(f"PRAGMA table_info('{TABLE_NAME}')").fetchall()
+    ]
+    incoming_columns = con.execute("DESCRIBE incoming_df").fetchdf()["column_name"].tolist()
+
+    if current_columns == incoming_columns:
+        return
+
+    backup_table = f"{TABLE_NAME}_legacy_{run_id}"
+    logger.warning(
+        "Schema incompatível detectado em %s. Backup=%s | antigo=%s | novo=%s",
+        TABLE_NAME,
+        backup_table,
+        current_columns,
+        incoming_columns,
+    )
+    con.execute(f"ALTER TABLE {TABLE_NAME} RENAME TO {backup_table}")
+    con.execute(f"""
+        CREATE TABLE {TABLE_NAME} AS
+        SELECT * FROM incoming_df WHERE 1=0
+    """)
+
+
 def load_data():
     run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     logger.info("Iniciando carga no DuckDB | run_id=%s", run_id)
@@ -49,26 +86,23 @@ def load_data():
         logger.warning("Falha ao abrir DB padrão (%s). Usando fallback: %s", exc, target_db_path)
         con = duckdb.connect(target_db_path)
 
-    con.register("incoming_df", df)
+    try:
+        con.register("incoming_df", df)
+        ensure_compatible_table(con, run_id)
 
-    con.execute(f"""
-        CREATE TABLE IF NOT EXISTS {TABLE_NAME} AS
-        SELECT * FROM incoming_df WHERE 1=0
-    """)
-
-    before_count = con.execute(f"SELECT COUNT(*) FROM {TABLE_NAME}").fetchone()[0]
-    con.execute(f"""
-        INSERT INTO {TABLE_NAME}
-        SELECT i.*
-        FROM incoming_df i
-        LEFT JOIN {TABLE_NAME} m
-          ON m.date = i.date
-         AND m.symbol = i.symbol
-        WHERE m.date IS NULL
-    """)
-    after_count = con.execute(f"SELECT COUNT(*) FROM {TABLE_NAME}").fetchone()[0]
-
-    con.close()
+        before_count = con.execute(f"SELECT COUNT(*) FROM {TABLE_NAME}").fetchone()[0]
+        con.execute(f"""
+            INSERT INTO {TABLE_NAME} BY NAME
+            SELECT i.*
+            FROM incoming_df i
+            LEFT JOIN {TABLE_NAME} m
+              ON m.date = i.date
+             AND m.symbol = i.symbol
+            WHERE m.date IS NULL
+        """)
+        after_count = con.execute(f"SELECT COUNT(*) FROM {TABLE_NAME}").fetchone()[0]
+    finally:
+        con.close()
 
     logger.info(
         "Carga finalizada | run_id=%s | db=%s | linhas_entrada=%d | inseridas=%d | total_tabela=%d",
