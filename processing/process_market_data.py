@@ -1,11 +1,22 @@
 import pandas as pd
 import os
+import logging
+from datetime import datetime, timezone
+from dotenv import load_dotenv
 
-BRONZE_PATH = "data/bronze"
-SILVER_PATH = "data/silver"
+load_dotenv()
+
+BRONZE_PATH = os.getenv("BRONZE_PATH", "data/bronze")
+SILVER_PATH = os.getenv("SILVER_PATH", "data/silver")
 REQUIRED_COLUMNS = ["date", "symbol", "open", "high", "low", "close", "volume"]
 
 os.makedirs(SILVER_PATH, exist_ok=True)
+
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO").upper(),
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s"
+)
+logger = logging.getLogger("processing.process_market_data")
 
 
 def get_latest_file():
@@ -74,6 +85,8 @@ def load_bronze(file_path):
 
 
 def process_data():
+    run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    logger.info("Iniciando processamento silver | run_id=%s", run_id)
 
     file_path = get_latest_file()
 
@@ -97,7 +110,7 @@ def process_data():
 
     df.to_csv(output_file, index=False)
 
-    print(f"Arquivo processado salvo em: {output_file}")
+    logger.info("Processamento finalizado | run_id=%s | linhas=%d | arquivo=%s", run_id, len(df), output_file)
 
 
 if __name__ == "__main__":

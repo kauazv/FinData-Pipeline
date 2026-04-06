@@ -1,16 +1,29 @@
 import yfinance as yf
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timezone
 import os
+import logging
+from dotenv import load_dotenv
 
-SYMBOLS = ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN"]
+load_dotenv()
 
-OUTPUT_PATH = "data/bronze"
-CACHE_PATH = "data/cache/yfinance"
+SYMBOLS = [s.strip().upper() for s in os.getenv("TICKERS", "AAPL,MSFT,NVDA,GOOGL,AMZN").split(",") if s.strip()]
+PERIOD = os.getenv("YF_PERIOD", "6mo")
+INTERVAL = os.getenv("YF_INTERVAL", "1d")
+OUTPUT_PATH = os.getenv("BRONZE_PATH", "data/bronze")
+CACHE_PATH = os.getenv("YF_CACHE_PATH", "data/cache/yfinance")
 REQUIRED_COLUMNS = ["date", "symbol", "open", "high", "low", "close", "volume"]
+
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO").upper(),
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s"
+)
+logger = logging.getLogger("ingestion.collect_market_data")
 
 
 def collect_data():
+    run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    logger.info("Iniciando coleta | run_id=%s | tickers=%s | period=%s | interval=%s", run_id, SYMBOLS, PERIOD, INTERVAL)
 
     os.makedirs(CACHE_PATH, exist_ok=True)
     yf.set_tz_cache_location(CACHE_PATH)
@@ -21,15 +34,15 @@ def collect_data():
 
         df = yf.download(
             symbol,
-            period="6mo",
-            interval="1d",
+            period=PERIOD,
+            interval=INTERVAL,
             auto_adjust=False,
             progress=False,
             multi_level_index=False
         )
 
         if df.empty:
-            print(f"Aviso: sem dados para {symbol}")
+            logger.warning("Sem dados para %s | run_id=%s", symbol, run_id)
             continue
 
         df["symbol"] = symbol
@@ -58,7 +71,7 @@ def collect_data():
 
     final_df.to_csv(file_path, index=False)
 
-    print("Dados históricos coletados:", file_path)
+    logger.info("Coleta finalizada | run_id=%s | linhas=%d | arquivo=%s", run_id, len(final_df), file_path)
 
 
 if __name__ == "__main__":

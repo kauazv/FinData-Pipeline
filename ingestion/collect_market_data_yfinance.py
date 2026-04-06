@@ -1,24 +1,32 @@
 import yfinance as yf
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timezone
 import os
+import logging
+from dotenv import load_dotenv
 
-BRONZE_PATH = "data/bronze"
-CACHE_PATH = "data/cache/yfinance"
+load_dotenv()
+
+BRONZE_PATH = os.getenv("BRONZE_PATH", "data/bronze")
+CACHE_PATH = os.getenv("YF_CACHE_PATH", "data/cache/yfinance")
+PERIOD = os.getenv("YF_PERIOD", "30d")
+INTERVAL = os.getenv("YF_INTERVAL", "1d")
 REQUIRED_COLUMNS = ["date", "symbol", "open", "high", "low", "close", "volume"]
 
 os.makedirs(BRONZE_PATH, exist_ok=True)
 
-TICKERS = [
-    "AAPL",
-    "MSFT",
-    "GOOGL",
-    "AMZN",
-    "NVDA"
-]
+TICKERS = [s.strip().upper() for s in os.getenv("TICKERS", "AAPL,MSFT,GOOGL,AMZN,NVDA").split(",") if s.strip()]
+
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO").upper(),
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s"
+)
+logger = logging.getLogger("ingestion.collect_market_data_yfinance")
 
 
 def collect_data():
+    run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    logger.info("Iniciando coleta | run_id=%s | tickers=%s | period=%s | interval=%s", run_id, TICKERS, PERIOD, INTERVAL)
 
     os.makedirs(CACHE_PATH, exist_ok=True)
     yf.set_tz_cache_location(CACHE_PATH)
@@ -29,15 +37,15 @@ def collect_data():
 
         df = yf.download(
             ticker,
-            period="30d",
-            interval="1d",
+            period=PERIOD,
+            interval=INTERVAL,
             auto_adjust=False,
             progress=False,
             multi_level_index=False
         )
 
         if df.empty:
-            print(f"Aviso: sem dados para {ticker}")
+            logger.warning("Sem dados para %s | run_id=%s", ticker, run_id)
             continue
 
         df["symbol"] = ticker
@@ -56,13 +64,13 @@ def collect_data():
     final_df = final_df.drop_duplicates(subset=["date", "symbol"])
     final_df = final_df.sort_values(["symbol", "date"]).reset_index(drop=True)
 
-    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
 
     file_path = f"{BRONZE_PATH}/market_data_{timestamp}.csv"
 
     final_df.to_csv(file_path, index=False)
 
-    print(f"Dados coletados e salvos em {file_path}")
+    logger.info("Coleta finalizada | run_id=%s | linhas=%d | arquivo=%s", run_id, len(final_df), file_path)
 
 
 if __name__ == "__main__":

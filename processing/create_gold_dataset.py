@@ -1,10 +1,21 @@
 import pandas as pd
 import os
+import logging
+from datetime import datetime, timezone
+from dotenv import load_dotenv
 
-SILVER_PATH = "data/silver"
-GOLD_PATH = "data/gold"
+load_dotenv()
+
+SILVER_PATH = os.getenv("SILVER_PATH", "data/silver")
+GOLD_PATH = os.getenv("GOLD_PATH", "data/gold")
 
 os.makedirs(GOLD_PATH, exist_ok=True)
+
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO").upper(),
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s"
+)
+logger = logging.getLogger("processing.create_gold_dataset")
 
 
 def get_latest_file():
@@ -16,6 +27,8 @@ def get_latest_file():
 
 
 def create_gold():
+    run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    logger.info("Iniciando criação gold | run_id=%s", run_id)
 
     file_path = get_latest_file()
 
@@ -35,7 +48,7 @@ def create_gold():
 
     df.to_csv(output, index=False)
 
-    print(f"Dataset GOLD salvo em: {output}")
+    logger.info("Gold finalizada | run_id=%s | linhas=%d | arquivo=%s", run_id, len(df), output)
 
 
 if __name__ == "__main__":

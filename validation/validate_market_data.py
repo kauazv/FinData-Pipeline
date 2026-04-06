@@ -1,8 +1,19 @@
 import pandas as pd
 import os
+import logging
+from datetime import datetime, timezone
+from dotenv import load_dotenv
 
-SILVER_PATH = "data/silver"
+load_dotenv()
+
+SILVER_PATH = os.getenv("SILVER_PATH", "data/silver")
 REQUIRED_COLUMNS = ["date", "symbol", "open", "high", "low", "close", "volume"]
+
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO").upper(),
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s"
+)
+logger = logging.getLogger("validation.validate_market_data")
 
 
 def get_latest_file():
@@ -14,12 +25,13 @@ def get_latest_file():
 
 
 def validate_data():
+    run_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
 
     file_path = get_latest_file()
 
     df = pd.read_csv(file_path)
 
-    print("Iniciando validação de dados...\n")
+    logger.info("Iniciando validação de dados | run_id=%s | arquivo=%s", run_id, file_path)
 
     validation_errors = []
 
@@ -53,15 +65,13 @@ def validate_data():
             validation_errors.append(f"{negative_volume} registros com volume negativo")
 
     if validation_errors:
-        print("Falhas de validação encontradas:")
+        logger.error("Falhas de validação encontradas | run_id=%s", run_id)
         for error in validation_errors:
-            print(f"- {error}")
-        print("\nValidação finalizada com erro.")
+            logger.error("- %s", error)
+        logger.error("Validação finalizada com erro | run_id=%s", run_id)
         raise SystemExit(1)
     else:
-        print("Validação concluída com sucesso.")
-
-    print("\nValidação finalizada.")
+        logger.info("Validação concluída com sucesso | run_id=%s | linhas=%d", run_id, len(df))
 
 
 if __name__ == "__main__":
