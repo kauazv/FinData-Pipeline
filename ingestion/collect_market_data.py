@@ -1,50 +1,65 @@
-import requests
+import yfinance as yf
 import pandas as pd
-from datetime import datetime, UTC
-from pathlib import Path
+from datetime import datetime
+import os
 
-URL = "https://api.coingecko.com/api/v3/coins/markets"
+SYMBOLS = ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN"]
 
-PARAMS = {
-    "vs_currency": "usd",
-    "order": "market_cap_desc",
-    "per_page": 50,
-    "page": 1
-}
+OUTPUT_PATH = "data/bronze"
+CACHE_PATH = "data/cache/yfinance"
+REQUIRED_COLUMNS = ["date", "symbol", "open", "high", "low", "close", "volume"]
 
 
-def fetch_market_data():
-    """Coleta dados da API"""
-    response = requests.get(URL, params=PARAMS)
-    response.raise_for_status()
-    data = response.json()
+def collect_data():
 
-    df = pd.DataFrame(data)
+    os.makedirs(CACHE_PATH, exist_ok=True)
+    yf.set_tz_cache_location(CACHE_PATH)
 
-    return df
+    all_data = []
 
+    for symbol in SYMBOLS:
 
-def save_raw_data(df):
-    """Salva dados na camada bronze"""
-    
-    timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+        df = yf.download(
+            symbol,
+            period="6mo",
+            interval="1d",
+            auto_adjust=False,
+            progress=False,
+            multi_level_index=False
+        )
 
-    path = Path("data/bronze")
-    path.mkdir(parents=True, exist_ok=True)
+        if df.empty:
+            print(f"Aviso: sem dados para {symbol}")
+            continue
 
-    file_path = path / f"market_data_{timestamp}.csv"
+        df["symbol"] = symbol
+        df.reset_index(inplace=True)
+        df.columns = [c.lower().replace(" ", "_") for c in df.columns]
 
-    df.to_csv(file_path, index=False)
+        df = df[REQUIRED_COLUMNS]
 
-    print(f"Dados salvos em {file_path}")
+        all_data.append(df)
 
+    if not all_data:
+        raise RuntimeError("Nenhum dado foi coletado da API")
 
-def main():
+    final_df = pd.concat(all_data, ignore_index=True)
+    final_df["date"] = pd.to_datetime(final_df["date"], errors="coerce")
 
-    df = fetch_market_data()
+    final_df = final_df.dropna(subset=REQUIRED_COLUMNS)
+    final_df = final_df.drop_duplicates(subset=["date", "symbol"])
+    final_df = final_df.sort_values(["symbol", "date"]).reset_index(drop=True)
 
-    save_raw_data(df)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    os.makedirs(OUTPUT_PATH, exist_ok=True)
+
+    file_path = f"{OUTPUT_PATH}/market_data_{timestamp}.csv"
+
+    final_df.to_csv(file_path, index=False)
+
+    print("Dados históricos coletados:", file_path)
 
 
 if __name__ == "__main__":
-    main()
+    collect_data()

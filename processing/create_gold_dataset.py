@@ -20,6 +20,10 @@ def create_gold():
     file_path = get_latest_file()
 
     df = pd.read_csv(file_path)
+    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    df["close"] = pd.to_numeric(df["close"], errors="coerce")
+    df = df.dropna(subset=["date", "symbol", "close"])
+    df = df.sort_values(["symbol", "date"]).reset_index(drop=True)
 
     df["return"] = df.groupby("symbol")["close"].pct_change()
 

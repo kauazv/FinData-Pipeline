@@ -1,15 +1,40 @@
+# Python
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
+
+# Virtual environments
 venv/
 .venv/
+
+# Environment/config secrets
 .env
+.env.*
+!.env.example
+
+# Data lake artifacts (keep folder structure only)
 data/bronze/*
 data/silver/*
 data/gold/*
 !data/bronze/.gitkeep
 !data/silver/.gitkeep
 !data/gold/.gitkeep
+
+# Runtime caches
+data/cache/
+.cache/
+
+# Local analytical databases and transaction logs
+warehouse/*.duckdb
+warehouse/*.duckdb.wal
+warehouse/*.db
+warehouse/*.db-wal
+warehouse/*.sqlite
+warehouse/*.sqlite3
+warehouse/*.wal
+
+# Notebook/system noise
 .ipynb_checkpoints/
 .DS_Store
 Thumbs.db
