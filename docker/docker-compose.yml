@@ -1,0 +1,19 @@
+services:
+  finpipe:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: finpipe-runner
+    env_file:
+      - ../.env
+    command: ["python", "pipelines/run_pipeline.py", "--skip-ingestion", "--with-ml"]
+    volumes:
+      - ../data:/app/data
+      - ../warehouse:/app/warehouse
+      - ../ml/artifacts:/app/ml/artifacts
+      - ../storage/runs:/app/storage/runs
+    healthcheck:
+      test: ["CMD", "python", "-c", "import pathlib; print(pathlib.Path('storage/runs').exists())"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
