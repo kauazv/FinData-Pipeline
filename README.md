@@ -2,6 +2,28 @@
 
 Pipeline de Engenharia e Análise de Dados Financeiros com dados reais (Yahoo Finance), modelagem analítica em DuckDB e baseline de ML.
 
+## Resumo do Projeto
+
+Este projeto implementa um mini sistema de dados para mercado financeiro com arquitetura em camadas:
+**Ingestion → Bronze → Silver → Validation → Gold → DuckDB → ML/Analytics**.
+
+O pipeline usa dados reais do Yahoo Finance, aplica validações de qualidade com gates, realiza carga incremental idempotente no warehouse e executa orquestração fim a fim com run metadata.
+
+Na camada de ML, há baseline com split temporal para:
+
+- classificação da direção do retorno D+1
+- regressão do retorno D+1
+
+Os modelos são comparados, avaliados e persistidos como artefatos para análise e reprodutibilidade.
+
+## Links Rápidos
+
+- Pipeline end-to-end: `pipelines/run_pipeline.py`
+- Treino baseline: `ml/train_baseline_model.py`
+- Testes: `tests/`
+- Runbook operacional: `docs/OPERATIONS_RUNBOOK.md`
+- Decisões de arquitetura: `docs/ARCHITECTURE_DECISIONS.md`
+
 ## Objetivo
 
 Simular um mini sistema de dados de fintech para:
