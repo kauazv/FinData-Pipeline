@@ -24,6 +24,8 @@ data/gold/*
 # Runtime caches
 data/cache/
 .cache/
+.pytest_cache/
+pytest-cache-files-*
 storage/runs/*
 !storage/runs/.gitkeep
 ml/artifacts/*

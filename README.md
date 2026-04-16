@@ -130,3 +130,8 @@ Ele lê `ml/artifacts/metrics_baseline.json` e compara modelos de classificaçã
 - expandir `features/` para feature store versionada
 - conectar `dashboard/` ao DuckDB e métricas de ML
 - adicionar orquestração agendada (Airflow/cron)
+
+## Documentação Operacional
+
+- Runbook: `docs/OPERATIONS_RUNBOOK.md`
+- Arquitetura/decisões técnicas: `docs/ARCHITECTURE_DECISIONS.md`
