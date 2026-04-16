@@ -25,6 +25,7 @@ def build_stages(skip_ingestion: bool, skip_analysis: bool) -> list[Stage]:
         Stage("validation", "validation/validate_market_data.py"),
         Stage("gold_processing", "processing/create_gold_dataset.py"),
         Stage("warehouse_load", "warehouse/load_to_duckdb.py"),
+        Stage("ml_training", "ml/train_baseline_model.py", enabled=False),
         Stage("analytics_query", "warehouse/query_analysis.py", enabled=not skip_analysis),
     ]
 
@@ -48,6 +49,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Executa o pipeline financeiro fim a fim.")
     parser.add_argument("--skip-ingestion", action="store_true", help="Pula etapa de ingestao.")
     parser.add_argument("--skip-analysis", action="store_true", help="Pula consulta analitica final.")
+    parser.add_argument("--with-ml", action="store_true", help="Executa etapa de treino baseline de ML.")
     return parser.parse_args()
 
 
@@ -92,6 +94,8 @@ def main() -> int:
     logger.info("Workspace: %s", project_root)
 
     stages = build_stages(skip_ingestion=args.skip_ingestion, skip_analysis=args.skip_analysis)
+    if args.with_ml:
+        stages = [Stage(s.name, s.script, enabled=True) if s.name == "ml_training" else s for s in stages]
     enabled_stages = [stage for stage in stages if stage.enabled]
     logger.info("Etapas habilitadas: %s", [stage.name for stage in enabled_stages])
 

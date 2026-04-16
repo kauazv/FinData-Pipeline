@@ -1,23 +1,35 @@
 import duckdb
 import os
+from pathlib import Path
 import logging
 from dotenv import load_dotenv
 
 load_dotenv()
 
 TABLE_NAME = os.getenv("DUCKDB_TABLE", "market_features")
+DB_PATH = os.getenv("DUCKDB_PATH", "warehouse/market_data.duckdb")
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO").upper(),
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s"
 )
 logger = logging.getLogger("warehouse.query_analysis")
 
+
 def get_latest_db_path():
-    files = [f for f in os.listdir("warehouse") if f.endswith(".duckdb") and f.startswith("market_data")]
-    if not files:
+    candidates = []
+
+    configured_db = Path(DB_PATH)
+    if configured_db.exists():
+        candidates.append(configured_db)
+
+    warehouse_dir = Path("warehouse")
+    candidates.extend(warehouse_dir.glob("market_data_*.duckdb"))
+
+    if not candidates:
         raise FileNotFoundError("Nenhum arquivo DuckDB encontrado em warehouse/")
-    files.sort()
-    return os.path.join("warehouse", files[-1])
+
+    latest_db = max(candidates, key=lambda p: p.stat().st_mtime)
+    return str(latest_db)
 
 db_path = get_latest_db_path()
 
