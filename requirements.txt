@@ -6,4 +6,4 @@ duckdb
 scikit-learn
 streamlit
 yfinance
-warehouse/*.duckdb
+pytest
