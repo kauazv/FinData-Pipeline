@@ -26,6 +26,8 @@ data/cache/
 .cache/
 storage/runs/*
 !storage/runs/.gitkeep
+ml/artifacts/*
+!ml/artifacts/.gitkeep
 
 # Local analytical databases and transaction logs
 warehouse/*.duckdb
